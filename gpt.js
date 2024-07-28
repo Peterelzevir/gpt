@@ -18,10 +18,12 @@ if (fs.existsSync(idChatFilePath)) {
 
 // Menyimpan ID chat jika belum ada
 function saveIdChat(id) {
-  if (!idChats.has(id)) {
-    idChats.add(id);
+  if (!idChats.has(id.toString())) {
+    idChats.add(id.toString());
     fs.appendFileSync(idChatFilePath, id + '\n');
+    return true; // Menunjukkan bahwa ini adalah pengguna baru
   }
+  return false;
 }
 
 // Mengirim notifikasi ke admin
@@ -32,12 +34,19 @@ function notifyAdmin(message) {
 // Melacak status permintaan pengguna
 let userRequests = {};
 
+// Melacak total permintaan yang telah selesai dan pending
+let totalRequestsCompleted = 0;
+let totalRequestsPending = 0;
+
+// Menyimpan waktu terakhir permintaan dari pengguna
+let userLastRequestTime = {};
+
 // Handler ketika user mengirim perintah /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const username = msg.from.username ? `@${msg.from.username}` : msg.from.first_name;
 
-  saveIdChat(chatId);
+  const isNewUser = saveIdChat(chatId);
 
   const startMessage = `hai ${username} saya adalah bot chatgpt by [hiyaok](https://t.me/hiyaok)`;
   const shareMessage = 'halooo ada bot chatgpt nih by @hiyaok pakee yuu';
@@ -54,122 +63,86 @@ bot.onText(/\/start/, (msg) => {
 
   bot.sendMessage(chatId, startMessage, options);
 
-  // Notifikasi admin tentang user baru
-  const newUserMessage = `
-    ┏━⏍ 𝙉𝙀𝙒 𝙐𝙎𝙀𝙍 👤
-    ┣⮕ 𝙐𝙎𝙀𝙍𝙉𝘼𝙈𝙀: ${username}
-    ┣⮕ 𝙄𝘿 : ${chatId}
-    ┗━━──━━━━─┉━━❐
-  `;
-  notifyAdmin(newUserMessage);
+  // Notifikasi admin tentang user baru jika ini adalah pengguna baru
+  if (isNewUser) {
+    const newUserMessage = `
+      ┏━⏍ 𝙉𝙀𝙒 𝙐𝙎𝙀𝙍 👤
+      ┣⮕ 𝙐𝙎𝙀𝙍𝙉𝘼𝙈𝙀: ${username}
+      ┣⮕ 𝙄𝘿 : ${chatId}
+      ┗━━──━━━━─┉━━❐
+    `;
+    notifyAdmin(newUserMessage);
+  }
 });
 
 // Handler untuk inline button "Total Request"
 bot.on('callback_query', (callbackQuery) => {
   const chatId = callbackQuery.message.chat.id;
   const totalUsers = idChats.size;
-  const totalRequests = Object.keys(userRequests).length; // Jumlah permintaan yang sedang diproses
-
-  const totalRequestMessage = `*Total Request:* \`${totalRequests}\`\n*Total Users:* \`${totalUsers}\``;
+  const totalRequestMessage = `*Total Requests Pending:* \`${totalRequestsPending}\`\n*Total Requests Completed:* \`${totalRequestsCompleted}\`\n*Total Users:* \`${totalUsers}\``;
 
   bot.sendMessage(chatId, totalRequestMessage, { parse_mode: 'Markdown' });
 });
 
-// Handler ketika user mengirim pesan selain /start di private chat
+// Handler ketika user mengirim pesan selain /start dan /broadcast di private chat
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
 
-  if (msg.chat.type === 'private' && !msg.text.startsWith('/start')) {
+  if (msg.chat.type === 'private' && !msg.text.startsWith('/start') && !msg.text.startsWith('/broadcast')) {
     if (userRequests[chatId]) {
       bot.sendMessage(chatId, "Tunggu proses sebelumnya selesai.", { reply_to_message_id: msg.message_id });
     } else {
-      userRequests[chatId] = true;
+      const currentTime = Date.now();
+      const lastRequestTime = userLastRequestTime[chatId] || 0;
+      const timeDiff = (currentTime - lastRequestTime) / 1000; // dalam detik
 
-      const processingMessage = "💡 Processing";
+      if (timeDiff < 20 && chatId.toString() !== adminId) {
+        const remainingTime = 20 - Math.ceil(timeDiff);
+        bot.sendMessage(chatId, `Tunggu ${remainingTime} detik lagi untuk membuat permintaan baru.`, { reply_to_message_id: msg.message_id });
+      } else {
+        userRequests[chatId] = true;
+        userLastRequestTime[chatId] = currentTime;
+        totalRequestsPending++;
 
-      bot.sendMessage(chatId, processingMessage, { reply_to_message_id: msg.message_id }).then((sentMsg) => {
-        axios.get(`https://api.ngodingaja.my.id/api/gpt?prompt=${msg.text}`)
-          .then(response => {
-            const data = response.data;
+        const processingMessage = "💡 Processing";
 
-            if (data.status) {
-              const resultMessage = `*${data.hasil}*`;
-              bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown', reply_to_message_id: msg.message_id });
-            } else {
-              bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
-            }
+        bot.sendMessage(chatId, processingMessage, { reply_to_message_id: msg.message_id }).then((sentMsg) => {
+          axios.get(`https://api.ngodingaja.my.id/api/gpt?prompt=${msg.text}`)
+            .then(response => {
+              const data = response.data;
 
-            // Hapus pesan "Processing"
-            bot.deleteMessage(chatId, sentMsg.message_id);
-            delete userRequests[chatId];
-          })
-          .catch(() => {
-            bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
-            bot.deleteMessage(chatId, sentMsg.message_id);
-            delete userRequests[chatId];
-          });
-      });
+              // Jika status true, ambil data bagian "hasil"
+              if (data.status) {
+                const resultMessage = `*${data.hasil}*`; // Mengambil data "hasil" dari respons JSON
+                bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown', reply_to_message_id: msg.message_id });
+                totalRequestsCompleted++;
+              } else {
+                bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
+              }
+              bot.deleteMessage(chatId, sentMsg.message_id);
+              delete userRequests[chatId];
+              totalRequestsPending--;
+            })
+            .catch(error => {
+              bot.sendMessage(chatId, "Terjadi kesalahan, coba lagi nanti.", { reply_to_message_id: msg.message_id });
+              bot.deleteMessage(chatId, sentMsg.message_id);
+              delete userRequests[chatId];
+              totalRequestsPending--;
+            });
+        });
+      }
     }
   }
 });
 
-// Handler untuk perintah /gpt di grup
-bot.onText(/\/gpt (.+)/, (msg, match) => {
+// Handler untuk perintah /broadcast (hanya untuk admin)
+bot.onText(/\/broadcast (.+)/, (msg, match) => {
   const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  const text = match[1];
+  const message = match[1];
 
-  if (userRequests[userId]) {
-    bot.sendMessage(chatId, "Tunggu proses sebelumnya selesai.", { reply_to_message_id: msg.message_id });
-  } else {
-    userRequests[userId] = true;
-
-    const processingMessage = "💡 Processing";
-
-    bot.sendMessage(chatId, processingMessage, { reply_to_message_id: msg.message_id }).then((sentMsg) => {
-      axios.get(`https://api.ngodingaja.my.id/api/gpt?prompt=${text}`)
-        .then(response => {
-          const data = response.data;
-
-          if (data.status) {
-            const resultMessage = `*${data.hasil}*`;
-            bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown', reply_to_message_id: msg.message_id });
-          } else {
-            bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
-          }
-
-          // Hapus pesan "Processing"
-          bot.deleteMessage(chatId, sentMsg.message_id);
-          delete userRequests[userId];
-        })
-        .catch(() => {
-          bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
-          bot.deleteMessage(chatId, sentMsg.message_id);
-          delete userRequests[userId];
-        });
+  if (chatId.toString() === adminId) {
+    idChats.forEach(id => {
+      bot.sendMessage(id, message);
     });
   }
 });
-
-// Handler untuk perintah /broadcast
-bot.onText(/\/broadcast (.+)/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const text = match[1];
-
-  if (chatId.toString() !== adminId) return;
-
-  idChats.forEach(id => {
-    bot.sendMessage(id, text).catch(() => {
-      // Notifikasi admin tentang user yang memblokir bot
-      const blockUserMessage = `
-        ┏━⏍ USER BAN BOT 😪
-        ┣⮕ 𝙐𝙎𝙀𝙍𝙉𝘼𝙈𝙀: [unknown]
-        ┣⮕ 𝙄𝘿 : ${id}
-        ┗━━──━━━━─┉━━❐
-      `;
-      notifyAdmin(blockUserMessage);
-    });
-  });
-});
-
-console.log('Bot is running...');
