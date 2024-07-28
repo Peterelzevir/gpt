@@ -135,14 +135,64 @@ bot.on('message', (msg) => {
   }
 });
 
-// Handler untuk perintah /broadcast (hanya untuk admin)
-bot.onText(/\/broadcast (.+)/, (msg, match) => {
+// Handler untuk perintah /gpt di grup
+bot.onText(/\/gpt (.+)/, (msg, match) => {
   const chatId = msg.chat.id;
-  const message = match[1];
+  const userId = msg.from.id;
+  const text = match[1];
 
-  if (chatId.toString() === adminId) {
-    idChats.forEach(id => {
-      bot.sendMessage(id, message);
+  if (userRequests[userId]) {
+    bot.sendMessage(chatId, "Tunggu proses sebelumnya selesai.", { reply_to_message_id: msg.message_id });
+  } else {
+    userRequests[userId] = true;
+
+    const processingMessage = "💡 Processing";
+
+    bot.sendMessage(chatId, processingMessage, { reply_to_message_id: msg.message_id }).then((sentMsg) => {
+      axios.get(`https://api.ngodingaja.my.id/api/gpt?prompt=${text}`)
+        .then(response => {
+          const data = response.data;
+
+          // Jika status true, ambil data bagian "hasil"
+          if (data.status) {
+            const resultMessage = `*${data.hasil}*`; // Mengambil data "hasil" dari respons JSON
+            bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown', reply_to_message_id: msg.message_id });
+          } else {
+            bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
+          }
+
+          // Hapus pesan "Processing"
+          bot.deleteMessage(chatId, sentMsg.message_id);
+          delete userRequests[userId];
+        })
+        .catch(() => {
+          bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
+          bot.deleteMessage(chatId, sentMsg.message_id);
+          delete userRequests[userId];
+        });
     });
   }
 });
+
+// Handler untuk perintah /broadcast
+bot.onText(/\/broadcast (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const text = match[1];
+
+  if (chatId.toString() !== adminId) return;
+
+  idChats.forEach(id => {
+    bot.sendMessage(id, text).catch(() => {
+      // Notifikasi admin tentang user yang memblokir bot
+      const blockUserMessage = `
+        ┏━⏍ USER BAN BOT 😪
+        ┣⮕ 𝙐𝙎𝙀𝙍𝙉𝘼𝙈𝙀: @${username}
+        ┣⮕ 𝙄𝘿 : ${id}
+        ┗━━──━━━━─┉━━❐
+      `;
+      notifyAdmin(blockUserMessage);
+    });
+  });
+});
+
+console.log('Bot is running...');
