@@ -96,8 +96,8 @@ bot.on('message', (msg) => {
       const lastRequestTime = userLastRequestTime[chatId] || 0;
       const timeDiff = (currentTime - lastRequestTime) / 1000; // dalam detik
 
-      if (timeDiff < 20 && chatId.toString() !== adminId) {
-        const remainingTime = 20 - Math.ceil(timeDiff);
+      if (timeDiff < 45 && chatId.toString() !== adminId) {
+        const remainingTime = 45 - Math.ceil(timeDiff);
         bot.sendMessage(chatId, `tunggu ${remainingTime} detik lagi untuk dapat pakai fitur bot 🗿, kalau gamau nunggu beli laa source code nya cuman 100rb ke @hiyaok`, { reply_to_message_id: msg.message_id });
       } else {
         userRequests[chatId] = true;
@@ -155,7 +155,7 @@ bot.onText(/\/gpt (.+)/, (msg, match) => {
 
           // Jika status true, ambil data bagian "hasil"
           if (data.status) {
-            const resultMessage = `*${data.hasil}*`; // Mengambil data "hasil" dari respons JSON
+            const resultMessage = `${data.hasil}`; // Mengambil data "hasil" dari respons JSON
             bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown', reply_to_message_id: msg.message_id });
           } else {
             bot.sendMessage(chatId, "erorr gess ya", { reply_to_message_id: msg.message_id });
