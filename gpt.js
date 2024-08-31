@@ -98,7 +98,7 @@ bot.on('message', (msg) => {
 
       if (timeDiff < 45 && chatId.toString() !== adminId) {
         const remainingTime = 45 - Math.ceil(timeDiff);
-        bot.sendMessage(chatId, `tunggu ${remainingTime} detik lagi untuk dapat pakai fitur bot 🗿, kalau gamau nunggu beli laa source code nya cuman 100rb ke @hiyaok`, { reply_to_message_id: msg.message_id });
+        bot.sendMessage(chatId, `tunggu ${remainingTime} detik lagi untuk dapat pakai fitur bot 🗿, kalau gamau nunggu beli laa source code bot nya cuman 250rb ke @hiyaok unlimited request`, { reply_to_message_id: msg.message_id });
       } else {
         userRequests[chatId] = true;
         userLastRequestTime[chatId] = currentTime;
