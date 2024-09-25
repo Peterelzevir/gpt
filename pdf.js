@@ -3,7 +3,7 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 
 // Token dari Bot Father
-const token = 'YOUR_TELEGRAM_BOT_TOKEN';
+const token = '7147604833:AAH8LPw1eVQTF_NKIBMh9bJx_lBCnAHlVuA';
 const bot = new TelegramBot(token, { polling: true });
 
 let conversionMode = null; // Untuk menyimpan mode konversi yang dipilih
