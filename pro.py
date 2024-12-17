@@ -38,11 +38,7 @@ class TelegramMultiAccountInviteTool:
         self.accounts: Dict[str, Dict] = {}
         self.config_file = 'accs.json'
         self.sessions_dir = 'sessions'
-        
-        # More robust rate limiting
-        self.global_rate_limiter = AsyncLimiter(3, 10)  # 3 actions per 10 seconds
-        
-        # Create necessary directories
+        self.global_rate_limiter = AsyncLimiter(3, 10)
         os.makedirs(self.sessions_dir, exist_ok=True)
         self.load_accounts()
 
