@@ -69,29 +69,6 @@ class TelegramMultiAccountInviteTool:
             logger.error(f"Error loading accounts: {e}")
             self.accounts = {}
 
-    def main():
-    """Main entry point for the Telegram Invite Tool."""
-    try:
-        # Set up global exception handling
-        tool = TelegramMultiAccountInviteTool()  # Make sure this matches the class name
-        tool.main_menu()
-    except KeyboardInterrupt:
-        print(f"\n{Fore.CYAN}Operation cancelled.{Style.RESET_ALL}")
-    except Exception as e:
-        # Log detailed traceback
-        logger.error(f"Critical error: {traceback.format_exc()}")
-        print(f"{Fore.RED}A critical error occurred: {e}{Style.RESET_ALL}")
-        sys.exit(1)
-
-    def save_accounts(self):
-        """Enhanced account saving with error handling."""
-        try:
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(self.accounts, f, indent=4, ensure_ascii=False)
-            logger.info("Accounts saved successfully")
-        except IOError as e:
-            logger.error(f"Failed to save accounts: {e}")
-
 async def add_telegram_account(self):
     """Enhanced account addition with more robust error handling."""
     print(f"{Fore.CYAN}[Add Telegram Account]{Style.RESET_ALL}")
@@ -480,6 +457,20 @@ async def add_telegram_account(self):
 
             # Pause before next iteration
             input("\nPress Enter to continue...")
+
+def main():
+    """Main entry point for the Telegram Invite Tool."""
+    try:
+        # Set up global exception handling
+        tool = TelegramMultiAccountInviteTool()  # Make sure this matches the class name
+        tool.main_menu()
+    except KeyboardInterrupt:
+        print(f"\n{Fore.CYAN}Operation cancelled.{Style.RESET_ALL}")
+    except Exception as e:
+        # Log detailed traceback
+        logger.error(f"Critical error: {traceback.format_exc()}")
+        print(f"{Fore.RED}A critical error occurred: {e}{Style.RESET_ALL}")
+        sys.exit(1)
 
 # Ensure the script can be run directly
 if __name__ == "__main__":
