@@ -36,9 +36,13 @@ logger = logging.getLogger(__name__)
 class TelegramMultiAccountInviteTool:
     def __init__(self):
         self.accounts: Dict[str, Dict] = {}
-        self.config_file = 'accs.json'
+        self.config_file = 'acc.json'
         self.sessions_dir = 'sessions'
-        self.global_rate_limiter = AsyncLimiter(3, 10)
+        
+        # More robust rate limiting
+        self.global_rate_limiter = AsyncLimiter(3, 10)  # 3 actions per 10 seconds
+        
+        # Create necessary directories
         os.makedirs(self.sessions_dir, exist_ok=True)
         self.load_accounts()
 
