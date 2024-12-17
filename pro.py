@@ -196,7 +196,7 @@ class TelegramMultiAccountInviteTool:
         # Display comprehensive results
         self._display_invite_summary(selected_accounts, invite_results)
 
-    async def _process_account_invites(
+        async def _process_account_invites(
         self,
         account_info: Dict,
         source_group: str,
