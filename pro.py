@@ -467,20 +467,6 @@ async def add_telegram_account(self):
             # Pause before next iteration
             input("\nPress Enter to continue...")
 
-def main():
-    """Main entry point for the Telegram Invite Tool."""
-    try:
-        # Set up global exception handling
-        tool = TelegramMultiAccountInviteTool()  # Make sure this matches the class name
-        tool.main_menu()
-    except KeyboardInterrupt:
-        print(f"\n{Fore.CYAN}Operation cancelled.{Style.RESET_ALL}")
-    except Exception as e:
-        # Log detailed traceback
-        logger.error(f"Critical error: {traceback.format_exc()}")
-        print(f"{Fore.RED}A critical error occurred: {e}{Style.RESET_ALL}")
-        sys.exit(1)
-
 # Ensure the script can be run directly
 if __name__ == "__main__":
     main()
